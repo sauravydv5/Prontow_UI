@@ -1,0 +1,6 @@
+- [ ] Import framer-motion components (motion, AnimatePresence) in OrderManagement.tsx
+- [ ] Wrap table rows with motion.tr for fade-in and stagger animations
+- [ ] Add slide-in animation to Dialog components using motion.div
+- [ ] Add hover scale effect to buttons using motion.button
+- [ ] Ensure animations trigger on load and interactions without changing logic
+- [ ] Test animations in browser to confirm smooth transitions
