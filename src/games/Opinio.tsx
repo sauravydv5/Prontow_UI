@@ -1,10 +1,20 @@
 import { useState, useEffect } from "react";
-import { RotateCw } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMatches, refreshMatches, getOpinioRecords } from "@/adminApi/opinioApi";
+import { RotateCw, Plus } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { getMatches, refreshMatches, getOpinioRecords, updateMatchStatus } from "@/adminApi/opinioApi";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { toast } from "sonner";
 
@@ -16,6 +26,9 @@ interface Match {
   teams: string[];
   venue?: string;
   date: string;
+  dateTimeGMT?: string;
+  apiMatchId?: string;
+  isLive?: boolean;
 }
 
 interface OpinioRecord {
@@ -34,6 +47,7 @@ function Opinio() {
   const queryClient = useQueryClient();
   const [showAllMatches, setShowAllMatches] = useState(false);
   const [loadingRefresh, setLoadingRefresh] = useState(false);
+  const [statusUpdateInfo, setStatusUpdateInfo] = useState<{ matchId: string; makeLive: boolean } | null>(null);
 
   const {
     data: matchesData,
@@ -43,6 +57,18 @@ function Opinio() {
     queryKey: ["opinioMatches"],
     queryFn: getMatches,
     staleTime: 5 * 60 * 1000, 
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: updateMatchStatus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["opinioMatches"] });
+      toast.success("Match status updated successfully!");
+    },
+    onError: (error: any) => {
+      console.error("Failed to update status:", error);
+      toast.error(error.response?.data?.message || "Failed to update match status.");
+    },
   });
 
   // const { data: recordsData, isLoading: isRecordsLoading } = useQuery(
@@ -58,8 +84,8 @@ function Opinio() {
   //   queryClient.prefetchQuery({ queryKey: ['opinioRecords'], queryFn: getOpinioRecords });
   // }, [queryClient]);
 
-  const allMatches: Match[] = Array.isArray(matchesData?.data)
-    ? matchesData.data
+  const allMatches: Match[] = Array.isArray(matchesData?.data?.data)
+    ? matchesData.data.data
     : [];
 
   // Using static data for records as requested
@@ -88,6 +114,13 @@ function Opinio() {
       status?.toLowerCase().includes("opt to") ||
       status?.toLowerCase().includes("need")
     );
+  };
+
+  const handleConfirmStatusUpdate = () => {
+    if (statusUpdateInfo) {
+      updateStatusMutation.mutate(statusUpdateInfo);
+      setStatusUpdateInfo(null);
+    }
   };
 
   const handleRefresh = async () => {
@@ -122,6 +155,20 @@ function Opinio() {
 
   return (
     <AdminLayout title="Games > Opinio">
+      <Dialog open={!!statusUpdateInfo} onOpenChange={() => setStatusUpdateInfo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Status Change</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to change this manual match's status to "{statusUpdateInfo?.makeLive ? 'Live' : 'Not Live'}"?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusUpdateInfo(null)}>Cancel</Button>
+            <Button className="bg-[#119D82] hover:bg-[#0d7d68]" onClick={handleConfirmStatusUpdate}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -134,6 +181,14 @@ function Opinio() {
           </h2>
 
           <div className="flex items-center gap-3">
+            <Button
+              onClick={() => navigate("/games/create-match")}
+              className="bg-[#119D82] hover:bg-[#0d7d68] text-white text-xs sm:text-sm px-3 sm:px-4 h-9"
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Create Match
+            </Button>
+
             {/* Refresh Button Right Side */}
             <button
               onClick={handleRefresh}
@@ -207,8 +262,7 @@ function Opinio() {
             {!isLoading &&
               !error &&
               displayedMatches.map((match) => {
-                const isLive = isMatchLive(match.status);
-
+                let isLive = match.isLive || isMatchLive(match.status);
                 return (
                   <motion.div
                     key={match._id}
@@ -263,6 +317,28 @@ function Opinio() {
                       <span className="truncate">
                         {match.venue?.split(",")[0] || "Venue TBA"}
                       </span>
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center ml-2"
+                      >
+                        <Switch
+                          checked={isLive}
+                          disabled={isLive}
+                          onCheckedChange={(checked) => {
+                            if (checked && match.dateTimeGMT && new Date() < new Date(match.dateTimeGMT)) {
+                              toast.info("This match will start later.");
+                              return;
+                            }
+
+                            if (match.apiMatchId?.startsWith("MANUAL_")) {
+                              setStatusUpdateInfo({ matchId: match._id, makeLive: checked });
+                            } else {
+                              updateStatusMutation.mutate({ matchId: match._id, makeLive: checked });
+                            }
+                          }}
+                          className="data-[state=checked]:bg-red-500 h-5 w-9"
+                        />
+                      </div>
                     </div>
                   </motion.div>
                 );

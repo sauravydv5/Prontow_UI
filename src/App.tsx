@@ -16,7 +16,6 @@ import Profile from "./pages/Profile";
 import Games from "./games/Games";
 import SpinTheWheel from "./games/SpinTheWheel";
 import CreateNewWheel from "./games/CreateNewWheel";
-import AskQuestion from "./games/AskQuestion";
 import PaymentsAndSettlements from "./pages/PaymentsAndSettlements";
 import Support from "./pages/Support";
 import Settings from "./pages/Settings";
@@ -24,6 +23,8 @@ import SupportDetails from "./pages/SupportDetails";
 import GeneralSettings from "./pages/GeneralSettings";
 import Opinio from "./games/Opinio";
 import Notifications from "./pages/Notifications";
+import CreateMatch from "./games/CreateMatch";
+import AskQuestion from "./games/AskQuestion";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/games/spin-the-wheel/create-new-wheel" element={<CreateNewWheel />} />
           <Route path="/games/opinio" element={<Opinio />} />
           <Route path="/games/opinio/ask-question/:matchId" element={<AskQuestion />} />
+          <Route path="/games/create-match" element={<CreateMatch />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

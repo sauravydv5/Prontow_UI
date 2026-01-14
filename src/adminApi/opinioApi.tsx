@@ -11,6 +11,14 @@ export const refreshMatches = () =>
 export const createEvent = (data: any) =>
   adminInstance.post("/betting/admin/create-event", data);
 
+// Add a new match manually
+export const addMatch = (data: any) =>
+  adminInstance.post("/betting/admin/add-matches", data);
+
+// Update match status
+export const updateMatchStatus = (data: { matchId: string; makeLive: boolean }) =>
+  adminInstance.patch("/betting/admin/update-match-status", data);
+
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL;

@@ -28,7 +28,7 @@ function AskQuestion() {
   });
 
   const matchName =
-    matchesData?.data?.find((match: Match) => match._id === matchId)?.name ||
+    matchesData?.data?.data?.find((match: Match) => match._id === matchId)?.name ||
     "Loading name...";
 
   const createEventMutation = useMutation({
